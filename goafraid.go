@@ -20,23 +20,24 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
-	"io/ioutil"
 )
 
 var (
 	configFile = flag.String("config_file", "", "Path to the JSON configuration file with the settings.")
-	endpoint   = url.URL{
-		Scheme: "https",
-		Host:   "sync.afraid.org",
-		Path:   "/u/",
-	}
 	httpClient = &http.Client{}
+
+	// Make sure that we use the v6 URL when updating a v6 address. This might not be the perfect assumption, but if we hit the non-v6 address we might actually not have a network to get to.
+	familyEndpoints = map[string]string{
+		familyV4: "https://sync.afraid.org/u/",
+		familyV6: "https://v6.sync.afraid.org/u/",
+	}
 )
 
 const (
@@ -81,60 +82,68 @@ func LoadConfig(path string) (*Config, error) {
 	return cfg, nil
 }
 
-func BuildUpdateURL(userEndpoint url.URL, host Host) (*url.URL, error) {
-	qv := url.Values{}
-	qv.Set("content-type", "json")
-	qv.Set("h", host.Name)
-
-	iface, err := net.InterfaceByName(host.Interface)
+func GetInterfaceIP(ifaceName string, family string) (string, error) {
+	iface, err := net.InterfaceByName(ifaceName)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	addrs, err := iface.Addrs()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	found := false
 	for _, addr := range addrs {
 		switch addr.(type) {
 		case *net.IPNet:
 			ipAddr := addr.(*net.IPNet).IP
-			switch host.AddressFamily {
+			switch family {
 			case familyV4:
 				if ipAddr.To4() != nil {
-					found = true
-					qv.Set("ip", ipAddr.String())
+					return ipAddr.String(), nil
 				}
 			case familyV6:
 				if ipAddr.To4() == nil && ipAddr.IsGlobalUnicast() {
-					found = true
-					qv.Set("ip", ipAddr.String())
+					return ipAddr.String(), nil
 				}
 			}
 		default:
-			return nil, fmt.Errorf("Unexpected address type %v for interface %v", addr.Network(), host.Interface)
+			return "", fmt.Errorf("Unexpected address type %v for interface %v", addr.Network(), ifaceName)
 		}
 	}
 
-	if !found {
-		return nil, fmt.Errorf("Unable to find address of family %v on interface %v", host.AddressFamily, host.Interface)
-	}
-
-	hostEndpoint := userEndpoint
-	hostEndpoint.RawQuery = qv.Encode()
-
-	return &hostEndpoint, nil
+	return "", fmt.Errorf("Unable to find address of family %v on interface %v", family, ifaceName)
 }
 
-func UpdateHost(userEndpoint url.URL, host Host) error {
-	hostEndpoint, err := BuildUpdateURL(userEndpoint, host)
+func BuildUpdateURL(user *url.Userinfo, host Host) (string, error) {
+	address, err := GetInterfaceIP(host.Interface, host.AddressFamily)
+	if err != nil {
+		return "", err
+	}
+
+	qv := url.Values{}
+	qv.Set("content-type", "json")
+	qv.Set("h", host.Name)
+	qv.Set("ip", address)
+
+	endpoint, err := url.Parse(familyEndpoints[host.AddressFamily])
+	if err != nil {
+		return "", err
+	}
+
+	endpoint.RawQuery = qv.Encode()
+	endpoint.User = user
+
+	return endpoint.String(), nil
+}
+
+func UpdateHost(user *url.Userinfo, host Host) error {
+	endpoint, err := BuildUpdateURL(user, host)
 	if err != nil {
 		return err
 	}
 
-	resp, err := http.Get(hostEndpoint.String())
+	resp, err := http.Get(endpoint)
 	if err != nil {
 		return err
 	}
@@ -164,11 +173,10 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	userEndpoint := endpoint
-	userEndpoint.User = url.UserPassword(cfg.User, cfg.Password)
+	user := url.UserPassword(cfg.User, cfg.Password)
 
 	for _, host := range cfg.Hosts {
-		err := UpdateHost(userEndpoint, host)
+		err := UpdateHost(user, host)
 		if err != nil {
 			log.Fatal(err)
 		}
