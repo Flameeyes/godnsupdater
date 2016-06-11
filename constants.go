@@ -14,9 +14,26 @@
 
 package godnsupdater
 
+import (
+	"fmt"
+	"strings"
+)
+
 const (
-	IPv4 AddressFamily = iota
+	Unknown AddressFamily = iota
+	IPv4
 	IPv6
 )
 
 type AddressFamily int
+
+func FamilyFromString(family string) (AddressFamily, error) {
+	switch strings.ToLower(family) {
+	case "ip4", "ipv4", "inet4", "4":
+		return IPv4, nil
+	case "ip6", "ipv6", "inet6", "6":
+		return IPv6, nil
+	}
+
+	return Unknown, fmt.Errorf("Unable to parse \"%v\" as an address family", family)
+}

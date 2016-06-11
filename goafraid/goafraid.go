@@ -26,7 +26,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 )
 
 var (
@@ -34,20 +33,10 @@ var (
 	httpClient = &http.Client{}
 
 	// Make sure that we use the v6 URL when updating a v6 address. This might not be the perfect assumption, but if we hit the non-v6 address we might actually not have a network to get to.
-	familyEndpoints = map[string]string{
-		familyV4: "https://sync.afraid.org/u/",
-		familyV6: "https://v6.sync.afraid.org/u/",
+	familyEndpoints = map[godnsupdater.AddressFamily]string{
+		godnsupdater.IPv4: "https://sync.afraid.org/u/",
+		godnsupdater.IPv6: "https://v6.sync.afraid.org/u/",
 	}
-
-	familyAddresses = map[string]godnsupdater.AddressFamily{
-		familyV4: godnsupdater.IPv4,
-		familyV6: godnsupdater.IPv6,
-	}
-)
-
-const (
-	familyV4 = "ip4"
-	familyV6 = "ip6"
 )
 
 type Host struct {
@@ -78,9 +67,8 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	for _, h := range cfg.Hosts {
-		h.AddressFamily = strings.ToLower(h.AddressFamily)
-		if h.AddressFamily == "" {
-			h.AddressFamily = familyV4
+		if _, err := godnsupdater.FamilyFromString(h.AddressFamily); err != nil {
+			return nil, err
 		}
 	}
 
@@ -88,7 +76,12 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 func BuildUpdateURL(user *url.Userinfo, host Host) (string, error) {
-	address, err := godnsupdater.GetInterfaceIP(host.Interface, familyAddresses[host.AddressFamily])
+	family, err := godnsupdater.FamilyFromString(host.AddressFamily)
+	if err != nil {
+		return "", err
+	}
+
+	address, err := godnsupdater.GetInterfaceIP(host.Interface, family)
 	if err != nil {
 		return "", err
 	}
@@ -98,7 +91,7 @@ func BuildUpdateURL(user *url.Userinfo, host Host) (string, error) {
 	qv.Set("h", host.Name)
 	qv.Set("ip", address)
 
-	endpoint, err := url.Parse(familyEndpoints[host.AddressFamily])
+	endpoint, err := url.Parse(familyEndpoints[family])
 	if err != nil {
 		return "", err
 	}
