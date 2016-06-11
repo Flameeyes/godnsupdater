@@ -20,9 +20,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/flameeyes/godnsupdater"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -37,6 +37,11 @@ var (
 	familyEndpoints = map[string]string{
 		familyV4: "https://sync.afraid.org/u/",
 		familyV6: "https://v6.sync.afraid.org/u/",
+	}
+
+	familyAddresses = map[string]godnsupdater.AddressFamily{
+		familyV4: godnsupdater.IPv4,
+		familyV6: godnsupdater.IPv6,
 	}
 )
 
@@ -82,41 +87,8 @@ func LoadConfig(path string) (*Config, error) {
 	return cfg, nil
 }
 
-func GetInterfaceIP(ifaceName string, family string) (string, error) {
-	iface, err := net.InterfaceByName(ifaceName)
-	if err != nil {
-		return "", err
-	}
-
-	addrs, err := iface.Addrs()
-	if err != nil {
-		return "", err
-	}
-
-	for _, addr := range addrs {
-		switch addr.(type) {
-		case *net.IPNet:
-			ipAddr := addr.(*net.IPNet).IP
-			switch family {
-			case familyV4:
-				if ipAddr.To4() != nil {
-					return ipAddr.String(), nil
-				}
-			case familyV6:
-				if ipAddr.To4() == nil && ipAddr.IsGlobalUnicast() {
-					return ipAddr.String(), nil
-				}
-			}
-		default:
-			return "", fmt.Errorf("Unexpected address type %v for interface %v", addr.Network(), ifaceName)
-		}
-	}
-
-	return "", fmt.Errorf("Unable to find address of family %v on interface %v", family, ifaceName)
-}
-
 func BuildUpdateURL(user *url.Userinfo, host Host) (string, error) {
-	address, err := GetInterfaceIP(host.Interface, host.AddressFamily)
+	address, err := godnsupdater.GetInterfaceIP(host.Interface, familyAddresses[host.AddressFamily])
 	if err != nil {
 		return "", err
 	}

@@ -1,4 +1,4 @@
-/goafraid
+/goafraid/goafraid
 *~
 # Make sure that the configuration is never checked in git (passwords.)
 *.json
