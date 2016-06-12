@@ -25,6 +25,13 @@ const (
 	IPv6
 )
 
+var (
+	DnsTypeByFamily = map[AddressFamily]string{
+		IPv4: "A",
+		IPv6: "AAAA",
+	}
+)
+
 type AddressFamily int
 
 func FamilyFromString(family string) (AddressFamily, error) {

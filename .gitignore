@@ -1,4 +1,6 @@
 /goafraid/goafraid
+/gogogandidns/gogogandidns
 *~
 # Make sure that the configuration is never checked in git (passwords.)
 *.json
+*.key
