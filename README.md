@@ -13,6 +13,6 @@ set of tools.
 
 ## Author
 
-Diego Elio Pettenò <flameeyes@flameeyes.eu>
+Diego Elio Pettenò <flameeyes@flameeyes.com>
 
 [licence]: http://www.apache.org/licenses/LICENSE-2.0

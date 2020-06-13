@@ -1,6 +1,6 @@
 // goafraid - freedns.afraid.org updater in Go.
 
-// Copyright 2016 Diego Elio Pettenò <flameeyes@flameeyes.eu>
+// Copyright 2016 Diego Elio Pettenò <flameeyes@flameeyes.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -128,7 +128,7 @@ func UpdateHost(user *url.Userinfo, host Host) error {
 func main() {
 	flag.Parse()
 
-	log.Println("goafraid - afraid.org updater by Diego Elio Pettenò <flameeyes@flameeyes.eu>")
+	log.Println("goafraid - afraid.org updater by Diego Elio Pettenò <flameeyes@flameeyes.com>")
 	if *configFile == "" {
 		log.Fatalf("Missing value for -config_file.")
 	}

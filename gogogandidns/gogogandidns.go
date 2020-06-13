@@ -1,4 +1,4 @@
-// Copyright 2016 Diego Elio Pettenò <flameeyes@flameeyes.eu>
+// Copyright 2016 Diego Elio Pettenò <flameeyes@flameeyes.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ func cloneLatestZone(c *client.Client, zId int64) (int64, error) {
 
 func main() {
 	flag.Parse()
-	log.Println("gogogandidns - Gandi Dynamic DNS updater by Diego Elio Pettenò <flameeyes@flameeyes.eu>")
+	log.Println("gogogandidns - Gandi Dynamic DNS updater by Diego Elio Pettenò <flameeyes@flameeyes.com>")
 
 	if *apiFilePath == "" {
 		log.Fatalf("Missing value for -api_file")
